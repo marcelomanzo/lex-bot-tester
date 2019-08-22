@@ -26,13 +26,16 @@ from datetime import datetime
 from json import JSONDecodeError
 from pprint import pprint
 from time import sleep
-
+import os
 import requests
 
 from lex_bot_tester.util.color import Color
 
 DOT_ALEXA_SKILLS = '.alexa_skills'
 HOME_DOT_ALEXA_SKILLS = str(pathlib.Path.home()) + '/' + DOT_ALEXA_SKILLS
+
+if os.name == 'nt':
+    HOME_DOT_ALEXA_SKILLS = str(pathlib.Path.home()) + '\\' + DOT_ALEXA_SKILLS
 
 
 class Request:
@@ -270,6 +273,22 @@ class SimulationResult(object):
         except KeyError:
             return None
 
+    def get_output_card_text(self):
+        if self.debug:
+            print('DEBUG: get_output_card_text: simulation_result = {}'.format(self.__simulation_result))
+        try:
+            return self.__simulation_result['cardText']
+        except KeyError:
+            return None
+
+    def get_output_card_title(self):
+        if self.debug:
+            print('DEBUG: get_output_card_text: simulation_result = {}'.format(self.__simulation_result))
+        try:
+            return self.__simulation_result['cardTitle']
+        except KeyError:
+            return None
+                
     def __str__(self):
         return 'SimulationResult {{ {} }}'.format(self.__simulation_result)
 
@@ -438,6 +457,25 @@ to refresh it.""")
             output_speech_ssml = None
             output_speech_text = None
             output_speech_type = None
+
+
+        try:
+            if debug:
+                print('DEBUG: finding card in {}'.format(r))
+                print('DEBUG: finding card in {}'.format(
+                    r['result']['skillExecutionInfo']['invocationResponse']['body']['response']['card']))
+
+            card = r['result']['skillExecutionInfo']['invocationResponse']['body']['response']['card']
+            card_type = card['type']
+            card_title = card['title']
+            card_text = card['text']
+
+        except Exception as e:
+            print(str(e))
+            card_type = None
+            card_title = None
+            card_text = None
+
         try:
             reprompt = \
                 r['result']['skillExecutionInfo']['invocationResponse']['body']['response']['reprompt']['outputSpeech'][
@@ -463,7 +501,8 @@ to refresh it.""")
                                  'outputSpeechSsml': output_speech_ssml, 'outputSpeechText': output_speech_text,
                                  'outputSpeechType': output_speech_type,
                                  'reprompt': reprompt,
-                                 'fulfilled': fulfilled, 'slots': slots})
+                                 'fulfilled': fulfilled, 'slots': slots,
+                                 'cardTitle': card_title, 'cardText': card_text, 'cardType': card_type})    
 
     def simulation(self, text: str, verbose: bool, debug: bool = False) -> SimulationResult:
         """
